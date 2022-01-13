@@ -20,7 +20,7 @@ RUN curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt
 RUN apt-get update
 RUN ACCEPT_EULA=Y apt-get install -y msodbcsql17
 
-RUN Rscript -e 'install.packages(c("odbc", "dbplyr", "rgdal", "sf"), repos="https://cran.microsoft.com/")'
+RUN Rscript -e 'install.packages(c("odbc", "dbplyr", "rgdal", "sf", "janitor", "tidyr"), repos="https://cran.microsoft.com/")'
 
 
 CMD ["bash"]
