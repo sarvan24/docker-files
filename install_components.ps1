@@ -9,7 +9,11 @@ else {
 Write-Host "Code is running as administrator..." -ForegroundColor Green
 }
 
-Write-Host "Checking if applications are installed..."
+
+# Set this value back at the end of the script to leave the system policy as we found it
+$executionpolicy = $Get-ExecutionPolicy
+#
+
 
 #
 $user = $env:UserName
@@ -44,38 +48,46 @@ foreach ($group in $groups) {
 #$list | where { $_.DisplayName } | select ComputerName, DisplayName, DisplayVersion | FT
 
 
-Write-Host "Checking for elevated permissions..."
-if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
-[Security.Principal.WindowsBuiltInRole] "Administrator")) {
-Write-Warning "Insufficient permissions to run this script. Open the PowerShell console as an administrator and run this script again."
-Break
+
+Write-Host "Checking if applications are installed..."
+try {
+    Write-Host "Checking if AzureCLI is installed..."
+    $azcliversion = Invoke-Expression "az --version"| Select -First 1
+    Write-HOST "$azcliversion  found"
 }
-else {
-Write-Host "Code is running as administrator — go on executing the script..." -ForegroundColor Green
-}
-
-
-
-
-Function Test-CommandExists
+Catch
 {
- Param ($command)
- $oldPreference = $ErrorActionPreference
- $ErrorActionPreference = ‘stop’
- try {if(Get-Command $command){“$command exists”}}
- Catch {“$command does not exist”}
- Finally {$ErrorActionPreference=$oldPreference}
-} #end function test-CommandExists
+    Write-Host "az cli not available."
+    Write-Host "Installing AzureCLI"
+    $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri https://aka.ms/installazurecliwindows -OutFile .\AzureCLI.msi; Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet'; rm .\AzureCLI.msi
+}
 
 
+try {
+    Write-Host "Checking if chocolatey package manager is installed..."
+    $chocoversion = Invoke-Expression "choco --version"| Select -First 1
+    Write-Host "choco $chocoversion found"
+}
+Catch
+{
+    Write-Host "Chocolatey Package Manager not available."
+    Write-Host "Installing Choco"
+    Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+}
+
+try {
+    Write-Host "Checking if helm package manager is installed..."
+    $helmversion = Invoke-Expression "helm --version"| Select -First 1
+    Write-Host "helm $helmversion  found"
+}
+Catch
+{
+    Write-Host "Helm Package Manager not available."
+    Write-Host "Installing Helm"
+    Invoke-Expression "choco install kubernetes-helm"
+}
 
 
-## Check if AZ CLI tools have already been installed
-## az --version
-## If above command returns an error it likely means az cli has not been installed. Run the following command.
-$ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri https://aka.ms/installazurecliwindows -OutFile .\AzureCLI.msi; Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet'; rm .\AzureCLI.msi
-## Test again & if test fails return error and ask to add a SNOW ticket to AA team.
-## Check if AZ CLI tools have already been installed
-## az --version
-
-
+#
+#TODO Set the execution policy back again $executionpolicy
+#
